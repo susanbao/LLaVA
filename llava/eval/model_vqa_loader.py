@@ -14,6 +14,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from PIL import Image
 import math
+import ipdb
 
 
 def split_list(lst, n):
@@ -94,7 +95,6 @@ def eval_model(args):
         print(f'It seems that this is a plain model, but it is not using a mmtag prompt, auto switching to {args.conv_mode}.')
 
     data_loader = create_data_loader(questions, args.image_folder, tokenizer, image_processor, model.config)
-
     for (input_ids, image_tensor, image_sizes), line in tqdm(zip(data_loader, questions), total=len(questions)):
         idx = line["question_id"]
         cur_prompt = line["text"]
