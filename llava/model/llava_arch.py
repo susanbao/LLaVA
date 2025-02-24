@@ -33,7 +33,7 @@ class LlavaMetaModel:
 
         if hasattr(config, "mm_vision_tower"):
             self.vision_tower = build_vision_tower(config, delay_load=True)
-            config.num_input_tokens = self.vision_tower.num_patches
+            config.mm_projector_input_tokens = self.vision_tower.num_patches
             self.mm_projector = build_vision_projector(config)
 
             if 'unpad' in getattr(config, 'mm_patch_merge_type', ''):
@@ -73,6 +73,7 @@ class LlavaMetaModel:
         self.config.use_mm_proj = True
         self.config.mm_projector_type = getattr(model_args, 'mm_projector_type', 'linear')
         self.config.mm_hidden_size = vision_tower.hidden_size
+        self.config.mm_projector_input_tokens = vision_tower.num_patches
         self.config.mm_vision_select_layer = mm_vision_select_layer
         self.config.mm_vision_select_feature = mm_vision_select_feature
         self.config.mm_patch_merge_type = mm_patch_merge_type

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import re
 
-from dasbtractor import DAbstractor
+from .d_abs import DAbstractor
 
 
 class IdentityMap(nn.Module):
@@ -54,40 +54,40 @@ def build_mlp_projector(config, delay_load=False, **kwargs):
 def build_dabstractor_projector(config):
     return DAbstractor(config)
 
-def build_cross_projector(conifg):
-    return CrossProjector(config)
+# def build_cross_projector(conifg):
+#     return CrossProjector(config)
 
-class CrossDabstractor(conifg):
-    def __init__(self, config):
-        super().__init__()
-        self.dabstractor = DAbstractor(config)
-        self.cross_attn = CrossProjector(config)
+# class CrossDabstractor(conifg):
+#     def __init__(self, config):
+#         super().__init__()
+#         self.dabstractor = DAbstractor(config)
+#         self.cross_attn = CrossProjector(config)
     
-    def forward(self, image_features, semantic_features):
-        attn_output, attn_weights = self.cross_attn(
-            hidden_states=semantic_features,
-            key_value_states=image_features,
-            attention_mask=None,
-            layer_head_mask=None,
-            output_attentions=True,
-        )
-        return self.d_abstractor(attn_output)
+#     def forward(self, image_features, semantic_features):
+#         attn_output, attn_weights = self.cross_attn(
+#             hidden_states=semantic_features,
+#             key_value_states=image_features,
+#             attention_mask=None,
+#             layer_head_mask=None,
+#             output_attentions=True,
+#         )
+#         return self.d_abstractor(attn_output)
 
-def build_cross_dabstractor_projector(config):
-    return CrossDabstractor(config)
+# def build_cross_dabstractor_projector(config):
+#     return CrossDabstractor(config)
 
 
 def build_vision_projector(config, delay_load=False, **kwargs):
     projector_type = getattr(config, 'mm_projector_type', 'linear')
 
-    if projector_type == 'cross_dabstractor':
-        return build_cross_dabstractor_projector(config)
+    # if projector_type == 'cross_dabstractor':
+    #     return build_cross_dabstractor_projector(config)
     
     if projector_type == "dasbtractor":
         return build_dabstractor_projector(config)
 
-    if projector_type == 'cross':
-        return build_cross_projector(config)
+    # if projector_type == 'cross':
+    #     return build_cross_projector(config)
 
     return build_mlp_projector(config, delay_load=delay_load)
     

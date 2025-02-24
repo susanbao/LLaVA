@@ -9,6 +9,9 @@ from transformers.models.deformable_detr.modeling_deformable_detr import (
     DeformableDetrDecoderOutput,
 )
 
+import yaml
+
+
 
 def build_eos_tokens(config, output_hidden_size: int):
     # think tokens
@@ -33,44 +36,39 @@ def build_pos_embeds(
 
     return pos_emb
 
+
 class DAbstractor(DeformableDetrDecoder):
     # reference: https://github.com/huggingface/transformers/blob/v4.34.1/src/transformers/models/deformable_detr/modeling_deformable_detr.py#1279
     def __init__(
         self, config, *igargs
     ):
-        super().__init__(config)
+        with open('/home/sas20048/LLaVA/llava/model/multimodal_projector/d_abs.yaml', 'r', encoding='utf-8') as file:
+            projector_config = yaml.safe_load(file)
+        projector_config = DeformableDetrConfig(**projector_config)
+        encoder_hidden_size = config.mm_hidden_size # vision_hidden_size
+        output_hidden_size = config.hidden_size # lm_hidden_size
 
-        config.num_queries = 144 # number of output tokens
-        config.num_feature_levels = 1
-        config.decoder_layers = 6
-        config.d_model = 1024
-        config.encoder_hidden_size = config.mm_hidden_size # vision_hidden_size
-        config.output_hidden_size = config.hidden_size # lm_hidden_size
-        config.feature_layer_index = -1
-        config.pooled_v_target = "query"
-        config.num_eos_tokens = 0
-        config.initializer_range = 0.02
-        config.pos_emb = True
+        super().__init__(projector_config)
 
-        num_input_tokens = config.num_input_tokens
+        num_input_tokens = config.mm_projector_input_tokens
 
-        self.num_queries = config.num_queries
-        self.num_input_tokens = config.num_input_tokens
+        self.num_queries = projector_config.num_queries
+        self.num_input_tokens = config.mm_projector_input_tokens
 
-        self.num_feature_levels = config.num_feature_levels
+        self.num_feature_levels = projector_config.num_feature_levels
         self.isMs = self.num_feature_levels > 1
 
         self.layers = nn.ModuleList(
-            [DeformableDetrDecoderLayer(config) for _ in range(config.decoder_layers)]
+            [DeformableDetrDecoderLayer(projector_config) for _ in range(projector_config.decoder_layers)]
         )
 
         # define input projection layers
-        is_dim_missmatch = config.d_model != config.encoder_hidden_size
+        is_dim_missmatch = projector_config.d_model != encoder_hidden_size
         input_proj_list = []
         for _ in range(self.num_feature_levels):
             if is_dim_missmatch:
                 # All hidden dims for output of each layer are the same in the CLIP vision encoder.
-                input_proj_list.append(nn.Linear(config.encoder_hidden_size, config.d_model))
+                input_proj_list.append(nn.Linear(encoder_hidden_size, projector_config.d_model))
             else:
                 input_proj_list.append(nn.Identity())
 
@@ -78,20 +76,20 @@ class DAbstractor(DeformableDetrDecoder):
 
         # define level_emb layer
         if self.isMs:  # for multi-scale features
-            assert config.num_feature_levels == len(config.feature_layer_index)
+            assert projector_config.num_feature_levels == len(projector_config.feature_layer_index)
             self.level_emb = nn.Parameter(
-                torch.Tensor(1, config.num_feature_levels, 1, config.d_model)
+                torch.Tensor(1, projector_config.num_feature_levels, 1, projector_config.d_model)
             )
             nn.init.normal_(self.level_emb)  # same initialize with the original implementation
 
         # initialize the query embeddings as pooled visual feature map
-        self.pooled_v_target = config.pooled_v_target
+        self.pooled_v_target = projector_config.pooled_v_target
         if self.pooled_v_target != "none":
-            tgt_hw = int(config.num_queries**0.5)
+            tgt_hw = int(projector_config.num_queries**0.5)
             self.downsampler = nn.AdaptiveAvgPool2d((tgt_hw, tgt_hw))
-            self.query_position_embeddings = nn.Embedding(config.num_queries, config.d_model)
+            self.query_position_embeddings = nn.Embedding(projector_config.num_queries, projector_config.d_model)
         else:
-            self.query_position_embeddings = nn.Embedding(config.num_queries, config.d_model * 2)
+            self.query_position_embeddings = nn.Embedding(projector_config.num_queries, projector_config.d_model * 2)
 
         # define reference points
         # manual initialization + make them as learable parameters
@@ -100,14 +98,14 @@ class DAbstractor(DeformableDetrDecoder):
         self.reference_points = nn.Parameter(reference_points)
 
         # think tokens
-        self.eos_tokens = build_eos_tokens(config, config.d_model)
+        self.eos_tokens = build_eos_tokens(projector_config, projector_config.d_model)
 
         # pos emb
-        self.v_pos_emb = build_pos_embeds(config, num_input_tokens, config.d_model)
+        self.v_pos_emb = build_pos_embeds(projector_config, num_input_tokens, projector_config.d_model)
 
         # token projector
-        if config.output_hidden_size != config.d_model:
-            self.output_proj = nn.Linear(config.d_model, config.output_hidden_size)
+        if output_hidden_size != projector_config.d_model:
+            self.output_proj = nn.Linear(projector_config.d_model, output_hidden_size)
         else:
             self.output_proj = nn.Identity()
 
