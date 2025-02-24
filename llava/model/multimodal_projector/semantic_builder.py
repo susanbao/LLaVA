@@ -2,15 +2,6 @@ import torch
 import torch.nn as nn
 import re
 
-from einops import rearrange
-from transformers.models.deformable_detr import DeformableDetrConfig
-from transformers.models.deformable_detr.modeling_deformable_detr import (
-    DeformableDetrDecoder,
-    DeformableDetrDecoderLayer,
-    DeformableDetrDecoderOutput,
-)
-
-from . import build_eos_tokens, build_pos_embeds
 
 from transformers import BartConfig, BartDecoderLayer
 

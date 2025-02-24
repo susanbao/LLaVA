@@ -10,25 +10,52 @@ from transformers.models.deformable_detr.modeling_deformable_detr import (
 )
 
 
+def build_eos_tokens(config, output_hidden_size: int):
+    # think tokens
+    num_eos_tokens = config.num_eos_tokens
+    if num_eos_tokens:
+        eos_tokens = torch.nn.Parameter(torch.randn(1, num_eos_tokens, output_hidden_size))
+        nn.init.trunc_normal_(eos_tokens, mean=0.0, std=config.initializer_range)
+    else:
+        eos_tokens = None
+
+    return eos_tokens
+
+def build_pos_embeds(
+    config, num_input_tokens: int, vision_hidden_size: int
+):
+    # pos emb
+    if config.pos_emb:
+        pos_emb = torch.nn.Parameter(torch.zeros(1, num_input_tokens, vision_hidden_size))
+        nn.init.trunc_normal_(pos_emb, mean=0.0, std=0.02)
+    else:
+        pos_emb = None
+
+    return pos_emb
+
 class DAbstractor(DeformableDetrDecoder):
     # reference: https://github.com/huggingface/transformers/blob/v4.34.1/src/transformers/models/deformable_detr/modeling_deformable_detr.py#1279
     def __init__(
-        self, config, num_input_tokens: int, *igargs
+        self, config, *igargs
     ):
         super().__init__(config)
 
-        config.num_queries = 
+        config.num_queries = 144 # number of output tokens
         config.num_feature_levels = 1
         config.decoder_layers = 6
         config.d_model = 1024
-        config.encoder_hidden_size = 
-        config.output_hidden_size = 
+        config.encoder_hidden_size = config.mm_hidden_size # vision_hidden_size
+        config.output_hidden_size = config.hidden_size # lm_hidden_size
         config.feature_layer_index = -1
         config.pooled_v_target = "query"
+        config.num_eos_tokens = 0
+        config.initializer_range = 0.02
+        config.pos_emb = True
 
+        num_input_tokens = config.num_input_tokens
 
         self.num_queries = config.num_queries
-        self.num_input_tokens = num_input_tokens
+        self.num_input_tokens = config.num_input_tokens
 
         self.num_feature_levels = config.num_feature_levels
         self.isMs = self.num_feature_levels > 1
