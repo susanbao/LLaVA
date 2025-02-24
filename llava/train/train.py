@@ -943,6 +943,9 @@ def train(attn_implementation=None):
         model.config.mm_use_im_patch_token = model_args.mm_use_im_patch_token
         model.initialize_vision_tokenizer(model_args, tokenizer=tokenizer)
 
+    if model_args.mm_projector_type == "dasbtractor":
+        model.get_model().get_mm_projector().gradient_checkpointing_disable()
+
     if training_args.bits in [4, 8]:
         from peft.tuners.lora import LoraLayer
         for name, module in model.named_modules():

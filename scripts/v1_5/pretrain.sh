@@ -1,6 +1,6 @@
 #!/bin/bash
 
-deepspeed --include localhost:0,1,2 llava/train/train_mem.py \
+deepspeed --include localhost:0 llava/train/train_mem.py \
     --deepspeed ./scripts/zero2.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version plain \

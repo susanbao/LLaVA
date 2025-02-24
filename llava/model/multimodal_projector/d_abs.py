@@ -216,6 +216,8 @@ class DAbstractor(DeformableDetrDecoder):
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
+            self.gradient_checkpointing = False
+
             if self.gradient_checkpointing and self.training:
 
                 def create_custom_forward(module):
@@ -399,5 +401,5 @@ class DAbstractor(DeformableDetrDecoder):
 
         return DeformableDetrDecoderOutput(
             last_hidden_state=decoder_outputs,
-        )
+        )["last_hidden_state"]
 
