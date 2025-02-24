@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import re
-from .multimodal_projector.semantic_builder import build_semantic_projector
+
+from dasbtractor import DAbstractor
 
 
 class IdentityMap(nn.Module):
